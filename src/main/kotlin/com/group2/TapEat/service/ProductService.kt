@@ -30,12 +30,13 @@ class ProductService(
     /**
      * Menambahkan produk baru berserta upload gambarnya.
      */
-    fun createProduct(name: String, price: Double, stock: Int, imageFile: MultipartFile?): Product {
+    fun createProduct(name: String, price: Double, stock: Int, category: String, imageFile: MultipartFile?): Product {
         val imageUrl = imageFile?.let { fileStorageService.storeFile(it) }
         val product = Product(
             name = name,
             price = price,
             stock = stock,
+            category = category,
             imageUrl = imageUrl,
             isActive = true
         )
@@ -45,11 +46,12 @@ class ProductService(
     /**
      * Mengupdate detail produk. Jika parameter gambar dikirim, gambar lama akan diganti.
      */
-    fun updateProduct(id: Long, name: String, price: Double, stock: Int, imageFile: MultipartFile?): Product? {
+    fun updateProduct(id: Long, name: String, price: Double, stock: Int, category: String, imageFile: MultipartFile?): Product? {
         val product = getProductById(id) ?: return null
         product.name = name
         product.price = price
         product.stock = stock
+        product.category = category
         imageFile?.let {
             product.imageUrl = fileStorageService.storeFile(it)
         }

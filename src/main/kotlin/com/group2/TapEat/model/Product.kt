@@ -28,7 +28,10 @@ class Product(
     var imageUrl: String? = null, // Nama file gambar yang disimpan di /uploads (disembunyikan dari JSON)
 
     @Column(name = "is_active", nullable = false)
-    var isActive: Boolean = true // Fitur soft delete
+    var isActive: Boolean = true, // Fitur soft delete
+
+    @Column(nullable = false)
+    var category: String = "Uncategorized" // Kategori produk (Makanan, Minuman, dsb)
 ) {
     /**
      * Properti virtual untuk JSON agar otomatis menyertakan folder 'uploads/'.

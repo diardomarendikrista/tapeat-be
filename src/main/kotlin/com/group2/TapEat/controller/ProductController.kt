@@ -29,9 +29,10 @@ class ProductController(private val productService: ProductService) {
         @RequestParam("name") name: String,
         @RequestParam("price") price: Double,
         @RequestParam("stock") stock: Int,
+        @RequestParam("category", required = false, defaultValue = "Uncategorized") category: String,
         @RequestParam("image") image: MultipartFile?
     ): ResponseEntity<Product> {
-        val product = productService.createProduct(name, price, stock, image)
+        val product = productService.createProduct(name, price, stock, category, image)
         return ResponseEntity.ok(product)
     }
 
@@ -44,9 +45,10 @@ class ProductController(private val productService: ProductService) {
         @RequestParam("name") name: String,
         @RequestParam("price") price: Double,
         @RequestParam("stock") stock: Int,
+        @RequestParam("category", required = false, defaultValue = "Uncategorized") category: String,
         @RequestParam("image") image: MultipartFile?
     ): ResponseEntity<Product> {
-        val updatedProduct = productService.updateProduct(id, name, price, stock, image)
+        val updatedProduct = productService.updateProduct(id, name, price, stock, category, image)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(updatedProduct)
     }
