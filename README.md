@@ -65,6 +65,13 @@ Manajemen file gambar menu ditangani secara lokal:
   ]
   ```
 
+#### Get Product by ID
+
+`GET /api/products/{id}`
+
+- **Response**: `200 OK` (Object Product)
+- **Description**: Mengambil detail satu produk berdasarkan ID untuk keperluan edit atau detail tampilan (jika ada).
+
 #### Create Product
 
 `POST /api/products`

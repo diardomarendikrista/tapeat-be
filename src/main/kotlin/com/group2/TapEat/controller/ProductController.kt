@@ -21,6 +21,16 @@ class ProductController(private val productService: ProductService) {
     fun getAllProducts(): List<Product> = productService.getAllActiveProducts()
 
     /**
+     * Mengambil satu produk berdasarkan ID.
+     */
+    @GetMapping("/{id}")
+    fun getProductById(@PathVariable id: Long): ResponseEntity<Product> {
+        val product = productService.getProductById(id)
+            ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(product)
+    }
+
+    /**
      * Endpoin Admin untuk membuat produk baru.
      * Menggunakan multipart/form-data untuk upload gambar.
      */
