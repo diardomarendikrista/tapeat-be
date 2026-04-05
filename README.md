@@ -18,9 +18,9 @@ Sistem ini mengelola siklus pesanan mulai dari pemilihan menu hingga penyajian d
 ### Cashier (Kasir)
 
 - **Melihat Pesanan Masuk**: Mengambil daftar pesanan yang belum bayar via `GET /api/orders/unpaid`.
-- **Konfirmasi Pembayaran**: Setelah uang diterima, kasir memanggil `PUT /api/queue/{id}/status?status=PENDING`. Pesanan akan berpindah dari antrean kasir ke antrean dapur.
-- **Pembatalan Pesanan**: Jika pelanggan batal bayar/checkout, kasir memanggil `PUT /api/orders/{id}/cancel`.
-- **Restorasi Stok**: Saat pesanan dibatalkan, sistem otomatis mengembalikan jumlah stok yang tadi terpotong ke database produk secara _real-time_.
+- **Konfirmasi Pembayaran**: Setelah uang diterima, kasir memanggil `PUT /api/orders/{id}/status?status=PENDING`. Pesanan akan berpindah dari antrean kasir ke antrean dapur.
+- **Pembatalan Pesanan**: Jika pelanggan batal bayar/checkout, kasir memanggil `PUT /api/orders/{id}/status?status=CANCELLED`.
+- **Restorasi Stok**: Saat status diubah menjadi `CANCELLED`, sistem otomatis mengembalikan jumlah stok yang tadi terpotong ke database produk secara _real-time_.
 
 ### Kitchen (Dapur)
 
@@ -146,11 +146,13 @@ Manajemen file gambar menu ditangani secara lokal:
 
 - **Response**: `200 OK` (Object Order)
 
-#### Cancel Order
+#### Update Order Status
 
-`PUT /api/orders/{id}/cancel`
+`PUT /api/orders/{id}/status?status=PENDING`
 
-- **Response**: `200 OK` (Status berubah jadi "CANCELLED", stok dikembalikan)
+- **Description**: Digunakan oleh Kasir untuk konfirmasi pembayaran (`PENDING`) atau pembatalan (`CANCELLED`).
+- **Request Parameter**: `status` (String: PENDING, CANCELLED)
+- **Response**: `200 OK` (Object Order)
 
 ---
 

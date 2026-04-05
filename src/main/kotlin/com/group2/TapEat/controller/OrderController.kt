@@ -49,11 +49,16 @@ class OrderController(private val orderService: OrderService) {
     }
 
     /**
-     * Endpoint untuk membatalkan pesanan dan mengembalikan stok.
+     * Endpoint untuk mengupdate status pesanan (misal: UNPAID -> PENDING untuk konfirmasi kasir).
+     * Juga bisa digunakan untuk membatalkan pesanan (CANCELLED).
      */
-    @PutMapping("/{id}/cancel")
-    fun cancelOrder(@PathVariable id: Long): ResponseEntity<Order> {
-        val cancelledOrder = orderService.cancelOrder(id) ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(cancelledOrder)
+    @PutMapping("/{id}/status")
+    fun updateStatus(
+        @PathVariable id: Long,
+        @RequestParam("status") status: String
+    ): ResponseEntity<Order> {
+        val updatedOrder = orderService.updateOrderStatus(id, status) ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(updatedOrder)
     }
 }
+
