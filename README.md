@@ -4,31 +4,36 @@ Sistem backend untuk aplikasi kios mandiri TapEat, dibangun menggunakan Spring B
 
 ---
 
-## Order Workflow (Alur Pemesanan)
+## Alur & Logika Bisnis
 
-1.  **Kiosk (Pelanggan):** Membuat pesanan via `POST /api/orders`. Pesanan tersimpan dengan status **`UNPAID`** dan stok produk langsung dikurangi (reservasi).
-2.  **Cashier (Kasir):** Melihat daftar pesanan masuk via `GET /api/orders/unpaid`. Setelah pembayaran diterima, Kasir memanggil `PUT /api/queue/{id}/status?status=PENDING` untuk konfirmasi.
-3.  **Kitchen (Dapur):** Pesanan muncul di antrean aktif via `GET /api/queue/active`. Setelah makanan diserahkan ke pelanggan, Dapur memanggil `PUT /api/queue/{id}/status?status=DELIVERED` untuk menyelesaikan antrean.
-4.  **Done List:** Semua pesanan yang sudah selesai dapat dilihat di `GET /api/queue/done`.
+Sistem ini mengelola siklus pesanan mulai dari pemilihan menu hingga penyajian dengan aturan main sebagai berikut:
 
----
+### Kiosk (Pelanggan)
 
-## Database & Entities
+- **Melihat Menu**: Menggunakan `GET /api/products?availableOnly=true`. Bisa ditambah filter `&category=...` atau `&name=...`. Produk stok 0 otomatis disembunyikan.
+- **Checkout Pesanan**: Mengirim data via `POST /api/orders`. Status awal adalah `UNPAID`.
+- **Reservasi Stok**: Saat checkout berhasil, sistem otomatis memotong stok produk agar tidak "balapan" dengan pelanggan lain.
+- **Penguncian Harga**: Harga produk saat itu langsung dikunci di tabel detail pesanan (`priceAtPurchase`) agar riwayat keuangan tetap akurat meskipun harga master produk berubah.
 
-Sistem ini menggunakan tiga entitas utama untuk mengelola katalog menu dan transaksi:
+### Cashier (Kasir)
 
-- **Product**: Mengelola katalog menu dengan dukungan soft-delete (`isActive`). Jika produk dihapus, ia hanya akan ditandai sebagai tidak aktif agar riwayat pesanan lama tetap valid.
-- **Order**: Mencatat detail transaksi utama seperti tipe pesanan (Dine-in/Takeaway), status pesanan, total harga, dan informasi pelanggan atau nomor meja.
-- **OrderItem**: Catatan historis dari setiap item dalam pesanan. Entitas ini secara khusus mengunci harga beli (`priceAtPurchase`) saat checkout agar tidak terpengaruh oleh perubahan harga master produk di masa depan.
+- **Melihat Pesanan Masuk**: Mengambil daftar pesanan yang belum bayar via `GET /api/orders/unpaid`.
+- **Konfirmasi Pembayaran**: Setelah uang diterima, kasir memanggil `PUT /api/queue/{id}/status?status=PENDING`. Pesanan akan berpindah dari antrean kasir ke antrean dapur.
+- **Pembatalan Pesanan**: Jika pelanggan batal bayar/checkout, kasir memanggil `PUT /api/orders/{id}/cancel`.
+- **Restorasi Stok**: Saat pesanan dibatalkan, sistem otomatis mengembalikan jumlah stok yang tadi terpotong ke database produk secara _real-time_.
 
----
+### Kitchen (Dapur)
 
-## Business Logic
+- **Melihat Antrean Masak**: Mengambil daftar pesanan aktif via `GET /api/queue/active` (Status `PENDING` atau `COOKING`).
+- **Update Status Masak**: Dapur memanggil `PUT /api/queue/{id}/status?status=COOKING` saat mulai memasak, dan status `DELIVERED` jika makanan sudah diserahkan.
+- **Riwayat Pesanan Selesai**: Melihat daftar pesanan yang sudah beres via `GET /api/queue/done`.
 
-- **Cashier Approval**: Setelah pesanan dibuat (`UNPAID`), kasir harus memberikan persetujuan (pindah ke `PENDING`) agar pesanan muncul di antrean dapur.
-- **Stock Reservation**: Stok produk langsung dikurangi saat pesanan dibuat (`UNPAID`) untuk menjamin ketersediaan (reservasi). Jika pesanan dibatalkan (`CANCELLED`), stok otomatis dikembalikan.
-- **Price Locking**: Harga produk disalin ke tabel detail pesanan saat transaksi terjadi untuk menjaga integritas data laporan keuangan.
-- **Soft Delete**: Produk yang dihapus melalui API tidak akan hilang dari database, melainkan hanya diubah status `is_active` menjadi `false`.
+### Admin (Manajemen)
+
+- **Manajemen Menu**: Menggunakan `GET /api/products` (default `availableOnly=false`) untuk melihat semua produk termasuk yang stoknya 0 untuk keperluan restock.
+- **Operasi CRUD**: Mengelola katalog via `POST /api/products` (Tambah), `PUT /api/products/{id}` (Edit), dan `DELETE /api/products/{id}` (Hapus).
+- **Soft Delete**: Penghapusan produk hanya mengubah status `isActive` menjadi `false` demi menjaga integritas data riwayat transaksi.
+- **Monitoring Transaksi**: Melihat seluruh riwayat transaksi yang pernah terjadi via `GET /api/orders`.
 
 ---
 
@@ -46,11 +51,17 @@ Manajemen file gambar menu ditangani secara lokal:
 
 ### Products
 
-#### Get All Active Products
+#### Get Products (Kiosk & Admin)
 
 `GET /api/products`
 
+- **Description**: Mengambil daftar produk aktif. Mendukung filter untuk kebutuhan Kiosk maupun Admin.
+- **Query Parameters**:
+  - `name` (String, Optional): Mencari produk berdasarkan nama.
+  - `category` (String, Optional): Memfilter produk berdasarkan kategori (misal: `Makanan`, `Minuman`).
+  - `availableOnly` (Boolean, Default: `false`): Jika `true`, hanya menampilkan produk dengan stok > 0 (untuk Kiosk). Jika `false`, menampilkan semua produk aktif termasuk yang stoknya habis (untuk Admin).
 - **Response**: `200 OK` (Array of Product)
+
 - **Contoh Response**:
   ```json
   [

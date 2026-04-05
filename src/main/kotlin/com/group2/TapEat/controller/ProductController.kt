@@ -15,10 +15,15 @@ import org.springframework.web.multipart.MultipartFile
 class ProductController(private val productService: ProductService) {
 
     /**
-     * Mengambil semua produk aktif untuk ditampilkan di Kios.
+     * Mengambil semua produk aktif untuk ditampilkan di Kios atau Admin.
+     * Filter: name (pencarian), category (kategori), availableOnly (true untuk Kios, false untuk Admin).
      */
     @GetMapping
-    fun getAllProducts(): List<Product> = productService.getAllActiveProducts()
+    fun getAllProducts(
+        @RequestParam(required = false) name: String?,
+        @RequestParam(required = false) category: String?,
+        @RequestParam(required = false, defaultValue = "false") availableOnly: Boolean
+    ): List<Product> = productService.getAllProducts(name, category, availableOnly)
 
     /**
      * Mengambil satu produk berdasarkan ID.

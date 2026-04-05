@@ -14,10 +14,10 @@ class ProductService(
     private val fileStorageService: FileStorageService
 ) {
     /**
-     * Mengambil semua produk yang is_active = true.
+     * Mengambil daftar produk aktif dengan filter dinamis (nama, kategori, dan ketersediaan).
      */
-    fun getAllActiveProducts(): List<Product> {
-        return productRepository.findByIsActiveTrue()
+    fun getAllProducts(name: String?, category: String?, availableOnly: Boolean): List<Product> {
+        return productRepository.findFiltered(name, category, availableOnly)
     }
 
     /**
