@@ -22,7 +22,15 @@ class QueueController(private val orderService: OrderService) {
     }
 
     /**
-     * Mengupdate status pesanan (misal: PENDING -> COOKING -> READY).
+     * Mengambil daftar pesanan yang sudah selesai (DELIVERED).
+     */
+    @GetMapping("/done")
+    fun getDoneQueue(): List<Order> {
+        return orderService.getDeliveredOrders()
+    }
+
+    /**
+     * Mengupdate status pesanan (misal: UNPAID -> PENDING -> COOKING -> DELIVERED).
      */
     @PutMapping("/{id}/status")
     fun updateStatus(

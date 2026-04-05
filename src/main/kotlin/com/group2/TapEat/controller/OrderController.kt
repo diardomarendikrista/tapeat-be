@@ -21,6 +21,12 @@ class OrderController(private val orderService: OrderService) {
     fun getAllOrders(): List<Order> = orderService.getAllOrders()
 
     /**
+     * Mengambil daftar pesanan yang berstatus UNPAID (Khusus untuk Kasir).
+     */
+    @GetMapping("/unpaid")
+    fun getUnpaidOrders(): List<Order> = orderService.getUnpaidOrders()
+
+    /**
      * Mengambil detail satu pesanan.
      */
     @GetMapping("/{id}")

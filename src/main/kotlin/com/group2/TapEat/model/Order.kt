@@ -27,7 +27,7 @@ class Order(
     var totalAmount: Double = 0.0, // Total harga pesanan
 
     @Column(nullable = false)
-    var status: String = "PENDING", // Status: PENDING, COOKING, READY, CANCELLED
+    var status: String = "UNPAID", // Status: UNPAID, PENDING, COOKING, DELIVERED, CANCELLED
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: LocalDateTime = LocalDateTime.now(),

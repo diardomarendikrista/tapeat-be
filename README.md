@@ -2,9 +2,18 @@
 
 Sistem backend untuk aplikasi kios mandiri TapEat, dibangun menggunakan Spring Boot 3 (Kotlin) dan MySQL.
 
-<hr/>
+---
 
-## 1. Database & Entities
+## Order Workflow (Alur Pemesanan)
+
+1.  **Kiosk (Pelanggan):** Membuat pesanan via `POST /api/orders`. Pesanan tersimpan dengan status **`UNPAID`** dan stok produk langsung dikurangi (reservasi).
+2.  **Cashier (Kasir):** Melihat daftar pesanan masuk via `GET /api/orders/unpaid`. Setelah pembayaran diterima, Kasir memanggil `PUT /api/queue/{id}/status?status=PENDING` untuk konfirmasi.
+3.  **Kitchen (Dapur):** Pesanan muncul di antrean aktif via `GET /api/queue/active`. Setelah makanan diserahkan ke pelanggan, Dapur memanggil `PUT /api/queue/{id}/status?status=DELIVERED` untuk menyelesaikan antrean.
+4.  **Done List:** Semua pesanan yang sudah selesai dapat dilihat di `GET /api/queue/done`.
+
+---
+
+## Database & Entities
 
 Sistem ini menggunakan tiga entitas utama untuk mengelola katalog menu dan transaksi:
 
@@ -12,20 +21,18 @@ Sistem ini menggunakan tiga entitas utama untuk mengelola katalog menu dan trans
 - **Order**: Mencatat detail transaksi utama seperti tipe pesanan (Dine-in/Takeaway), status pesanan, total harga, dan informasi pelanggan atau nomor meja.
 - **OrderItem**: Catatan historis dari setiap item dalam pesanan. Entitas ini secara khusus mengunci harga beli (`priceAtPurchase`) saat checkout agar tidak terpengaruh oleh perubahan harga master produk di masa depan.
 
-<hr/>
+---
 
-## 2. CORE Business Logic (Transactional)
+## Business Logic
 
-Logika bisnis utama diimplementasikan di dalam `OrderService` dan `ProductService`:
-
-- **Stock Reduction**: Saat pesanan dibuat, sistem akan mengecek ketersediaan stok produk. Jika stok mencukupi, sistem akan mengurangi stok secara otomatis sebelum menyimpan pesanan.
+- **Cashier Approval**: Setelah pesanan dibuat (`UNPAID`), kasir harus memberikan persetujuan (pindah ke `PENDING`) agar pesanan muncul di antrean dapur.
+- **Stock Reservation**: Stok produk langsung dikurangi saat pesanan dibuat (`UNPAID`) untuk menjamin ketersediaan (reservasi). Jika pesanan dibatalkan (`CANCELLED`), stok otomatis dikembalikan.
 - **Price Locking**: Harga produk disalin ke tabel detail pesanan saat transaksi terjadi untuk menjaga integritas data laporan keuangan.
-- **Order Cancellation**: Jika pesanan dibatalkan (status berubah menjadi `CANCELLED`), sistem akan melakukan pengulangan pada setiap item pesanan dan mengembalikan jumlah stok ke master produk.
 - **Soft Delete**: Produk yang dihapus melalui API tidak akan hilang dari database, melainkan hanya diubah status `is_active` menjadi `false`.
 
-<hr/>
+---
 
-## 3. File Uploads
+## File Uploads
 
 Manajemen file gambar menu ditangani secara lokal:
 
@@ -33,13 +40,13 @@ Manajemen file gambar menu ditangani secara lokal:
 - **ProductController**: Mendukung penerimaan file gambar melalui format `MultipartFile` pada request `POST` dan `PUT`.
 - **WebConfig**: Mengatur pemetaan URL sehingga folder `/uploads/**` dapat diakses secara statis melalui browser atau aplikasi Android (Contoh: `http://localhost:4095/uploads/filename.jpg`).
 
-<hr/>
+---
 
 ## API Endpoints Details
 
-### A. Products (Admin & Catalog)
+### Products
 
-#### 1. Get All Active Products
+#### Get All Active Products
 
 `GET /api/products`
 
@@ -58,19 +65,15 @@ Manajemen file gambar menu ditangani secara lokal:
   ]
   ```
 
-#### 2. Create Product
+#### Create Product
 
 `POST /api/products`
 
 - **Request Type**: `multipart/form-data`
-- **Parameters**:
-  - `name` (String)
-  - `price` (Double)
-  - `stock` (Int)
-  - `image` (File, Optional)
+- **Parameters**: `name` (String), `price` (Double), `stock` (Int), `image` (File, Optional)
 - **Response**: `200 OK` (Object Product)
 
-#### 3. Update Product
+#### Update Product
 
 `PUT /api/products/{id}`
 
@@ -78,23 +81,30 @@ Manajemen file gambar menu ditangani secara lokal:
 - **Parameters**: Sama dengan Create Product.
 - **Response**: `200 OK` (Object Product)
 
-#### 4. Delete Product (Soft Delete)
+#### Delete Product (Soft Delete)
 
 `DELETE /api/products/{id}`
 
 - **Response**: `200 OK`
 
-<hr/>
+---
 
-### B. Orders (Transactions)
+### Orders (Transactions)
 
-#### 1. Get All Order History
+#### Get Unpaid Orders (For Cashier)
+
+`GET /api/orders/unpaid`
+
+- **Description**: Mengambil semua pesanan yang baru masuk dan menunggu konfirmasi/pembayaran di kasir (status `UNPAID`).
+- **Response**: `200 OK` (Array of Order)
+
+#### Get All Order History
 
 `GET /api/orders`
 
 - **Response**: `200 OK` (Array of Order sorted by newest)
 
-#### 2. Checkout Order
+#### Checkout Order
 
 `POST /api/orders`
 
@@ -110,55 +120,65 @@ Manajemen file gambar menu ditangani secara lokal:
     ]
   }
   ```
-- **Response**: `200 OK` (Object Order lengkap dengan items)
+- **Response**: `200 OK` (Status awal: `UNPAID`, stok langsung dipotong/direservasi)
 
-#### 2. Get Order Detail
+#### Get Order Detail
 
 `GET /api/orders/{id}`
 
 - **Response**: `200 OK` (Object Order)
 
-#### 3. Cancel Order
+#### Cancel Order
 
 `PUT /api/orders/{id}/cancel`
 
 - **Response**: `200 OK` (Status berubah jadi "CANCELLED", stok dikembalikan)
 
-<hr/>
+---
 
-### C. Kitchen (Queue Management)
+### Kitchen Queue
 
-#### 1. Get Active Queue
+#### Get Active Queue
 
 `GET /api/queue/active`
 
-- **Description**: Mengambil pesanan dengan status `PENDING` atau `COOKING`.
+- **Description**: Mengambil pesanan yang sedang aktif di antrean dapur (misalnya status `PENDING` atau `COOKING`).
 - **Response**: `200 OK` (Array of Order)
 
-#### 2. Update Order Status
+#### Get Completed Queue
 
-`PUT /api/queue/{id}/status?status=READY`
+`GET /api/queue/done`
 
-- **Request Parameter**: `status` (String: PENDING, COOKING, READY)
+- **Description**: Mengambil daftar pesanan yang sudah selesai diantar (status `DELIVERED`).
+- **Response**: `200 OK` (Array of Order)
+
+#### Update Order Status
+
+`PUT /api/queue/{id}/status?status=DELIVERED`
+
+- **Request Parameter**: `status` (String: UNPAID, PENDING, COOKING, DELIVERED, CANCELLED)
 - **Response**: `200 OK` (Object Order)
 
-<hr/>
+---
 
 ## Menjalankan Aplikasi
 
-1. Pastikan MySQL berjalan dan database `TapEat` sudah dibuat.
-2. Atur kredensial di `src/main/resources/application.properties`.
-3. Jalankan dengan perintah:
-   ```bash
-   .\gradlew bootRun
-   ```
-4. Server akan berjalan di port **4095**.
+1.  Pastikan MySQL berjalan dan database `TapEat` sudah dibuat.
+2.  Atur kredensial di `src/main/resources/application.properties`.
+3.  Jalankan dengan perintah:
+    ```bash
+    .\gradlew bootRun
+    ```
+4.  Server akan berjalan di port **4095**.
 
-<hr/>
+---
 
 ## Cara Build (Deployment)
+
 Untuk melakukan build dan menghasilkan file `.jar` tanpa menjalankan unit test:
+
 ```bash
 .\gradlew clean build -x test
 ```
+
 File hasil build akan berada di `build/libs/`.

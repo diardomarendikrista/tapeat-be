@@ -31,6 +31,20 @@ class OrderService(
     }
 
     /**
+     * Mengambil daftar pesanan yang sudah selesai (Status DELIVERED).
+     */
+    fun getDeliveredOrders(): List<Order> {
+        return orderRepository.findByStatusInOrderByCreatedAtAsc(listOf("DELIVERED")).reversed()
+    }
+
+    /**
+     * Mengambil daftar pesanan yang berstatus UNPAID (Menunggu konfirmasi kasir).
+     */
+    fun getUnpaidOrders(): List<Order> {
+        return orderRepository.findByStatusInOrderByCreatedAtAsc(listOf("UNPAID"))
+    }
+
+    /**
      * Mengambil seluruh riwayat pesanan (History).
      */
     fun getAllOrders(): List<Order> {
@@ -50,7 +64,7 @@ class OrderService(
             orderType = request.orderType,
             tableNumber = request.tableNumber,
             customerName = request.customerName,
-            status = "PENDING"
+            status = "UNPAID"
         )
 
         var totalAmount = 0.0
@@ -85,7 +99,7 @@ class OrderService(
     }
 
     /**
-     * Update status pesanan (misal: PENDING -> COOKING -> READY).
+     * Update status pesanan (misal: PENDING -> COOKING -> DELIVERED).
      * Jika status berubah menjadi CANCELLED atau keluar dari CANCELLED, stok akan disesuaikan.
      */
     @Transactional
