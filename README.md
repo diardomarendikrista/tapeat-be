@@ -4,6 +4,29 @@ Sistem backend untuk aplikasi kios mandiri TapEat, dibangun menggunakan Spring B
 
 ---
 
+## Pembagian Tugas
+
+Berikut adalah kontributor dan pembagian tanggung jawab dalam pengembangan backend TapEat:
+
+1.  **Diardo Marendi Krista**
+
+    - **Init Project & Boilerplate**: Inisialisasi Spring Boot, konfigurasi JPA/Hibernate, dan arsitektur dasar.
+    - **Order Module**: Implementasi logika checkout, manajemen status pesanan (UNPAID/CANCELLED), dan reservasi stok.
+    - **Database Schema**: Perancangan ERD dan struktur tabel MySQL.
+
+2.  **Zhafira Zila Qonita**
+
+    - **Product Module**: Implementasi CRUD produk, logika filtering produk (availableOnly), dan soft delete.
+    - **File Storage**: Manajemen upload gambar menu ke direktori server menggunakan `FileStorageService`.
+    - **Config**: Pengaturan static resource mapping untuk akses file. (WebConfig.kt)
+
+3.  **Yohanes Septian Prasetyo**
+    - **Queue Module**: Implementasi antrean dapur (PENDING/DELIVERED) dan riwayat penyelesaian.
+    - **Documentation**: Pembuatan README dan dokumentasi teknis API Endpoints.
+    - **Testing & Quality**: Validasi endpoint dan integrasi logika antar modul.
+
+---
+
 ## Alur & Logika Bisnis
 
 Sistem ini mengelola siklus pesanan mulai dari pemilihan menu hingga penyajian dengan aturan main sebagai berikut:
