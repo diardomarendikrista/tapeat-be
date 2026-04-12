@@ -31,7 +31,11 @@ class ProductService(
      * Menambahkan produk baru berserta upload gambarnya.
      */
     fun createProduct(name: String, price: Double, stock: Int, category: String, imageFile: MultipartFile?): Product {
-        val imageUrl = imageFile?.let { fileStorageService.storeFile(it) }
+        val imageUrl = if (imageFile != null && !imageFile.isEmpty) {
+            fileStorageService.storeFile(imageFile)
+        } else {
+            null
+        }
         val product = Product(
             name = name,
             price = price,
@@ -52,8 +56,8 @@ class ProductService(
         product.price = price
         product.stock = stock
         product.category = category
-        imageFile?.let {
-            product.imageUrl = fileStorageService.storeFile(it)
+        if (imageFile != null && !imageFile.isEmpty) {
+            product.imageUrl = fileStorageService.storeFile(imageFile)
         }
         return productRepository.save(product)
     }
